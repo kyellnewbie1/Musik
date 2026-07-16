@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Download dan dengar musik Gratis</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-base: #121212;
+            --bg-elevated: #181818;
+            --bg-highlight: #282828;
+            --text-base: #ffffff;
+            --text-subdued: #a7a7a7;
+            --brand-color: #1ed760;
+            --nav-height: 65px;
+            --mini-player-height: 60px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-base);
+            overflow-x: hidden;
+            /* Hide scrollbar for Android native feel */
+            scrollbar-width: none; 
+        }
+        body::-webkit-scrollbar { display: none; }
+
+        /* HEADER */
+        header {
+            padding: 40px 20px 20px 20px;
+            background: linear-gradient(180deg, rgba(30,215,96,0.3) 0%, var(--bg-base) 100%);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .greeting {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        /* VIEWS (Home, Search, Library) */
+        .view {
+            display: none;
+            padding: 0 20px 150px 20px; /* space for player and nav */
+            animation: fadeIn 0.3s ease;
+        }
+        .view.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 20px 0 15px 0;
+        }
+
+        /* LIST ITEM UI */
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .song-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: transparent;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .song-item:active { background: var(--bg-highlight); }
+        .song-cover {
+            width: 55px;
+            height: 55px;
+            border-radius: 4px;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .song-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        .song-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-base);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .song-artist {
+            font-size: 0.85rem;
+            color: var(--text-subdued);
+            margin-top: 4px;
+        }
+        .song-action {
+            color: var(--text-subdued);
+            font-size: 1.2rem;
+            padding: 10px;
+        }
+        .song-item.playing .song-title { color: var(--brand-color); }
+
+        /* SEARCH INPUT */
+        .search-box {
+            width: 100%;
+            background: #242424;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 30px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            outline: none;
+            margin-bottom: 20px;
+        }
+        .search-box::placeholder { color: var(--text-subdued); }
+
+        /* BOTTOM NAV */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--nav-height);
+            background: rgba(18, 18, 18, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-subdued);
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .nav-item i { font-size: 1.4rem; }
+        .nav-item.active { color: var(--text-base); }
+
+        /* MINI PLAYER */
+        .mini-player {
+            position: fixed;
+            bottom: calc(var(--nav-height) + 5px);
+            left: 2%;
+            width: 96%;
+            height: var(--mini-player-height);
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 99;
+            transform: translateY(150%);
+            transition: transform 0.3s ease;
+        }
+        .mini-player.visible { transform: translateY(0); }
+        .mp-cover { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
+        .mp-info { flex: 1; overflow: hidden; }
+        .mp-title { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mp-artist { font-size: 0.75rem; color: var(--text-subdued); }
+        .mp-controls { display: flex; gap: 15px; align-items: center; font-size: 1.2rem; }
+        .play-pause-btn { color: white; }
+
+        /* FULL SCREEN PLAYER */
+        .full-player {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            background: linear-gradient(180deg, #333333 0%, var(--bg-base) 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .full-player.open { transform: translateY(0); }
+        .fp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            font-size: 1.2rem;
+        }
+        .fp-cover {
+            width: 100%;
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            border-radius: 12px;
+            margin: 30px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .fp-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .fp-title { font-size: 1.6rem; font-weight: 700; }
+        .fp-artist { font-size: 1rem; color: var(--text-subdued); margin-top: 5px; }
+        
+        .fp-fav { font-size: 1.5rem; color: var(--text-subdued); transition: 0.2s; }
+        .fp-fav.active { color: var(--brand-color); }
+
+        /* PROGRESS BAR */
+        .progress-container { margin-bottom: 30px; }
+        .progress-bar-bg {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: white;
+            width: 0%;
+            border-radius: 2px;
+            position: relative;
+        }
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -4px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            display: none;
+        }
+        .progress-container:active .progress-bar-fill::after { display: block; }
+        .progress-container:active .progress-bar-fill { background: var(--brand-color); }
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-subdued);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* FP CONTROLS */
+        .fp-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .fp-ctrl-btn { font-size: 1.8rem; color: white; cursor: pointer; }
+        .fp-ctrl-play {
+            font-size: 4rem;
+            color: white;
+            transition: transform 0.1s;
+        }
+        .fp-ctrl-play:active { transform: scale(0.95); }
+
+        /* Download Button */
+        .fp-actions {
+            margin-top: auto;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .btn-download {
+            background: transparent;
+            border: 1px solid var(--text-subdued);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+        .btn-download:active { background: rgba(255,255,255,0.1); border-color: white; }
+
+        .footer-text {
+            text-align: center;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.3);
+            margin-top: 40px;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-subdued);
+        }
+        .empty-state i { font-size: 3rem; margin-bottom: 15px; opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+    <!-- BACA DATA DARI FILE JS -->
+    <script src="music-data.js"></script>
+
+    <header id="header">
+        <h1 class="greeting">Selamat Datang</h1>
+    </header>
+
+    <!-- HOME VIEW -->
+    <main id="view-home" class="view active">
+        <h2 class="section-title">Baru Ditambahkan</h2>
+        <div class="song-list" id="home-list">
+            <!-- Diisi Javascript -->
+        </div>
+        <div class="footer-text">2026-2027 &copy; Kaishi</div>
+    </main>
+
+    <!-- SEARCH VIEW -->
+    <main id="view-search" class="view">
+        <h1 class="greeting">Cari Musik</h1>
+        <input type="text" class="search-box" id="searchInput" placeholder="Artis, lagu, atau podcast">
+        <div class="song-list" id="search-list">
+            <!-- Diisi Javascript -->
+        </div>
+        <div class="footer-text">2026-2027 &copy; Kaishi</div>
+    </main>
+
+    <!-- LIBRARY VIEW -->
+    <main id="view-library" class="view">
+        <h1 class="greeting">Koleksi Kamu</h1>
+        <h2 class="section-title">Lagu Disukai</h2>
+        <div class="song-list" id="library-list">
+            <!-- Diisi Javascript -->
+        </div>
+        <div class="footer-text">2026-2027 &copy; Kaishi</div>
+    </main>
+
+    <!-- MINI PLAYER -->
+    <div class="mini-player" id="miniPlayer" onclick="openFullPlayer()">
+        <img src="" alt="Cover" class="mp-cover" id="mpCover">
+        <div class="mp-info">
+            <div class="mp-title" id="mpTitle">Title</div>
+            <div class="mp-artist" id="mpArtist">Artist</div>
+        </div>
+        <div class="mp-controls">
+            <i class="fas fa-heart" id="mpFavBtn" onclick="toggleFav(event)"></i>
+            <i class="fas fa-play play-pause-btn" id="mpPlayBtn" onclick="togglePlay(event)"></i>
+        </div>
+    </div>
+
+    <!-- FULL SCREEN PLAYER -->
+    <div class="full-player" id="fullPlayer">
+        <div class="fp-header">
+            <i class="fas fa-chevron-down" onclick="closeFullPlayer()"></i>
+            <span style="font-size: 0.8rem; font-weight: 700; letter-spacing: 1px;">SEDANG DIPUTAR</span>
+            <i class="fas fa-ellipsis-h"></i>
+        </div>
+        
+        <img src="" alt="Cover" class="fp-cover" id="fpCover">
+        
+        <div class="fp-info-row">
+            <div>
+                <div class="fp-title" id="fpTitle">Title</div>
+                <div class="fp-artist" id="fpArtist">Artist</div>
+            </div>
+            <i class="far fa-heart fp-fav" id="fpFavBtn" onclick="toggleFav(event)"></i>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar-bg" id="progressBarBg">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            <div class="time-row">
+                <span id="currentTime">0:00</span>
+                <span id="totalTime">0:00</span>
+            </div>
+        </div>
+
+        <div class="fp-controls">
+            <i class="fas fa-step-backward fp-ctrl-btn" onclick="prevSong()"></i>
+            <i class="fas fa-play-circle fp-ctrl-play" id="fpPlayBtn" onclick="togglePlay(event)"></i>
+            <i class="fas fa-step-forward fp-ctrl-btn" onclick="nextSong()"></i>
+        </div>
+
+        <div class="fp-actions">
+            <a href="#" class="btn-download" id="downloadBtn" download>
+                <i class="fas fa-arrow-down"></i> Download
+            </a>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('home')">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" onclick="switchView('search')">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </div>
+        <div class="nav-item" onclick="switchView('library')">
+            <i class="fas fa-book-open"></i>
+            <span>Library</span>
+        </div>
+    </nav>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        // PASTIKAN DATA ADA DARI music-data.js
+        let songs = typeof musicDatabase !== 'undefined' ? musicDatabase : [];
+        let favorites = JSON.parse(localStorage.getItem('kaishi_favs')) || [];
+        
+        let currentIndex = -1;
+        let isPlaying = false;
+        const audio = document.getElementById('audioPlayer');
+
+        // Render List Fungsi Utama
+        function renderList(containerId, dataList) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            if (songs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-folder-open"></i>
+                        <p>File music-data.js kosong atau tidak ditemukan.</p>
+                    </div>`;
+                return;
+            }
+
+            if (dataList.length === 0) {
+                container.innerHTML = `<p style="color:var(--text-subdued); text-align:center;">Tidak ada lagu.</p>`;
+                return;
+            }
+
+            dataList.forEach((song, index) => {
+                const globalIndex = songs.findIndex(s => s.id === song.id);
+                const isCurrent = globalIndex === currentIndex;
+                
+                const div = document.createElement('div');
+                div.className = `song-item ${isCurrent ? 'playing' : ''}`;
+                div.onclick = () => playSong(globalIndex);
+                
+                div.innerHTML = `
+                    <img src="${song.cover}" class="song-cover" alt="cover">
+                    <div class="song-info">
+                        <div class="song-title">${song.title}</div>
+                        <div class="song-artist">${song.artist}</div>
+                    </div>
+                    <i class="fas fa-ellipsis-v song-action"></i>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderAllViews() {
+            // Home
+            renderList('home-list', songs);
+            // Library
+            const favSongs = songs.filter(s => favorites.includes(s.id));
+            renderList('library-list', favSongs);
+            // Search (Default kosong sebelum ketik)
+            renderList('search-list', songs);
+        }
+
+        // Jalankan saat pertama kali dibuka
+        renderAllViews();
+
+        // Fitur Ganti Tab / View
+        function switchView(viewName) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            if(viewName === 'home') { navItems[0].classList.add('active'); document.querySelector('header').style.display = 'block'; }
+            if(viewName === 'search') { navItems[1].classList.add('active'); document.querySelector('header').style.display = 'none'; }
+            if(viewName === 'library') { navItems[2].classList.add('active'); document.querySelector('header').style.display = 'none'; }
+        }
+
+        // Fitur Pencarian
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            const filtered = songs.filter(s => s.title.toLowerCase().includes(val) || s.artist.toLowerCase().includes(val));
+            renderList('search-list', filtered);
+        });
+
+        // --- AUDIO PLAYER LOGIC ---
+        function playSong(index) {
+            if (index < 0 || index >= songs.length) return;
+            
+            if (currentIndex === index && isPlaying) {
+                // If clicking the same playing song, do nothing or open player
+                openFullPlayer();
+                return;
+            }
+
+            currentIndex = index;
+            const song = songs[currentIndex];
+            
+            // Set Audio
+            audio.src = song.url;
+            audio.play();
+            isPlaying = true;
+
+            // Update UI Mini Player
+            document.getElementById('miniPlayer').classList.add('visible');
+            document.getElementById('mpCover').src = song.cover;
+            document.getElementById('mpTitle').innerText = song.title;
+            document.getElementById('mpArtist').innerText = song.artist;
+
+            // Update UI Full Player
+            document.getElementById('fpCover').src = song.cover;
+            document.getElementById('fpTitle').innerText = song.title;
+            document.getElementById('fpArtist').innerText = song.artist;
+            document.getElementById('downloadBtn').href = song.url;
+            document.getElementById('fullPlayer').style.background = `linear-gradient(180deg, #444 0%, var(--bg-base) 100%)`; // Dynamic feel
+
+            updatePlayButtons();
+            updateFavButtons();
+            renderAllViews(); // refresh green text on list
+        }
+
+        function togglePlay(e) {
+            if(e) e.stopPropagation(); // Mencegah full player terbuka saat klik play di mini player
+            if (!audio.src) return;
+            
+            if (isPlaying) { audio.pause(); } 
+            else { audio.play(); }
+            
+            isPlaying = !isPlaying;
+            updatePlayButtons();
+        }
+
+        function updatePlayButtons() {
+            const mpBtn = document.getElementById('mpPlayBtn');
+            const fpBtn = document.getElementById('fpPlayBtn');
+            
+            if (isPlaying) {
+                mpBtn.className = 'fas fa-pause play-pause-btn';
+                fpBtn.className = 'fas fa-pause-circle fp-ctrl-play';
+            } else {
+                mpBtn.className = 'fas fa-play play-pause-btn';
+                fpBtn.className = 'fas fa-play-circle fp-ctrl-play';
+            }
+        }
+
+        function nextSong() {
+            let nextIdx = currentIndex + 1;
+            if(nextIdx >= songs.length) nextIdx = 0;
+            playSong(nextIdx);
+        }
+
+        function prevSong() {
+            let prevIdx = currentIndex - 1;
+            if(prevIdx < 0) prevIdx = songs.length - 1;
+            playSong(prevIdx);
+        }
+
+        // Full Player Toggle
+        function openFullPlayer() {
+            if(currentIndex === -1) return;
+            document.getElementById('fullPlayer').classList.add('open');
+        }
+        function closeFullPlayer() {
+            document.getElementById('fullPlayer').classList.remove('open');
+        }
+
+        // Progress Bar Update
+        audio.addEventListener('timeupdate', () => {
+            if(audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('progressBarFill').style.width = percent + '%';
+                
+                // Format waktu (0:00)
+                document.getElementById('currentTime').innerText = formatTime(audio.currentTime);
+                document.getElementById('totalTime').innerText = formatTime(audio.duration);
+            }
+        });
+
+        audio.addEventListener('ended', nextSong);
+
+        // Click Progress Bar
+        document.getElementById('progressBarBg').addEventListener('click', function(e) {
+            const width = this.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            audio.currentTime = (clickX / width) * duration;
+        });
+
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        }
+
+        // Fitur Favorite
+        function toggleFav(e) {
+            if(e) e.stopPropagation();
+            if(currentIndex === -1) return;
+
+            const songId = songs[currentIndex].id;
+            const indexInFavs = favorites.indexOf(songId);
+
+            if(indexInFavs > -1) {
+                favorites.splice(indexInFavs, 1); // Hapus
+            } else {
+                favorites.push(songId); // Tambah
+            }
+
+            localStorage.setItem('kaishi_favs', JSON.stringify(favorites));
+            updateFavButtons();
+            renderAllViews(); // Refresh library list
+        }
+
+        function updateFavButtons() {
+            if(currentIndex === -1) return;
+            const songId = songs[currentIndex].id;
+            const isFav = favorites.includes(songId);
+            
+            const mpFav = document.getElementById('mpFavBtn');
+            const fpFav = document.getElementById('fpFavBtn');
+
+            if(isFav) {
+                mpFav.className = 'fas fa-heart';
+                mpFav.style.color = 'var(--brand-color)';
+                fpFav.className = 'fas fa-heart fp-fav active';
+            } else {
+                mpFav.className = 'far fa-heart';
+                mpFav.style.color = 'var(--text-base)';
+                fpFav.className = 'far fa-heart fp-fav';
+            }
+        }
+    </script>
+</body>
+</html>
